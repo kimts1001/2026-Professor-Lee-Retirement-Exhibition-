@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design DNA Diagram — 추론의 연대기</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffcc;
+  --paper: #1a1814;
+  --rule: #ddddb0;
+  --trace: #7a7660;
+  --accent: #c84b2f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; background: var(--bg); }
+body { color: var(--paper); font-family: 'DM Mono', monospace; font-size: 11px; overflow-x: hidden; }
+
+#hdr {
+  padding: 38px 60px 26px;
+  border-bottom: 1px solid var(--rule);
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 40px;
+}
+.hdr-title { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; letter-spacing: -0.01em; line-height: 1; margin-bottom: 5px; }
+.hdr-title em { font-style: italic; color: var(--accent); }
+.hdr-sub { font-size: 9px; color: var(--trace); letter-spacing: .1em; text-transform: uppercase; line-height: 2.2; }
+.hdr-legend { display: flex; gap: 26px; }
+.leg-col { display: flex; flex-direction: column; gap: 4px; }
+.leg-lbl { font-size: 7.5px; color: #2a2720; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 2px; }
+.leg-row { display: flex; align-items: center; gap: 7px; font-size: 8.5px; color: var(--trace); white-space: nowrap; }
+.leg-line { width: 20px; height: 2.5px; border-radius: 2px; }
+.leg-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+#tabs { display: flex; border-bottom: 1px solid var(--rule); padding: 0 60px; }
+.tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--trace); font-family: 'DM Mono', monospace; font-size: 9.5px;
+  padding: 11px 20px; cursor: pointer; letter-spacing: .1em; text-transform: uppercase;
+  transition: all .15s; margin-bottom: -1px;
+}
+.tab.active { color: var(--paper); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: #888; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+#p-main { overflow-x: auto; }
+#main-svg { display: block; }
+
+#p-an { padding: 40px 60px 80px; }
+.ag  { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule); margin-bottom: 1px; }
+.ag5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--rule); margin-bottom: 1px; }
+.ac  { background: var(--bg); padding: 22px 26px; }
+.ac h4 { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 400; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.ac p, .ac li { font-size: 9.5px; color: var(--trace); line-height: 2.2; margin-bottom: 3px; }
+.ac ul { padding-left: 13px; }
+.tt { display: inline-block; padding: 1px 6px; border-radius: 2px; font-size: 8px; color: var(--paper); margin-right: 3px; font-weight: 500; }
+.ph { border-left: 2px solid var(--accent); padding: 8px 12px; margin-bottom: 9px; background: rgba(200,75,47,.04); }
+.ph-lbl { font-size: 9.5px; font-weight: 500; color: var(--paper); margin-bottom: 3px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.bar-bg  { flex: 1; background: #e8e8c0; height: 5px; border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+
+#tip {
+  position: fixed; background: #ffffcc; color: var(--paper);
+  padding: 11px 15px; font-size: 9px; line-height: 1.9;
+  pointer-events: none; opacity: 0; transition: opacity .1s;
+  z-index: 9999; max-width: 295px; border-left: 2px solid var(--accent);
+  box-shadow: 0 4px 20px rgba(0,0,0,.7);
+}
+#tip.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div>
+    <div class="hdr-title">Design <em>DNA</em> Diagram</div>
+    <div class="hdr-sub">
+      Chronicle of Inference &nbsp;·&nbsp; 20 Projects · 8 Traits · 5 Strands · 2008–2026<br>
+      Heatmap cells = Trait nodes &nbsp;·&nbsp; Curves through gaps = Trait threads
+    </div>
+  </div>
+  <div class="hdr-legend">
+    <div class="leg-col">
+      <div class="leg-lbl">Strands</div>
+      <div id="leg-s"></div>
+    </div>
+    <div class="leg-col">
+      <div class="leg-lbl">Traits</div>
+      <div id="leg-t"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tabs">
+  <button class="tab active" onclick="showPanel('main',this)">DNA + Heatmap</button>
+  <button class="tab" onclick="showPanel('an',this)">Analysis</button>
+</div>
+
+<div id="p-main" class="panel active"><svg id="main-svg"></svg></div>
+<div id="p-an"   class="panel"><div id="an-wrap"></div></div>
+<div id="tip"></div>
+
+<script>
+/* ══ DATA ══ */
+const STRANDS = [
+  { id:'S1', name:'Nature → Ecology',          c:'#4a9e6b', traits:['T1','T8'],
+    desc:'자연 시스템을 건축 언어로 번역. 마당·수직농장·대사 루프·인플레이터블 구름·물결 파사드.' },
+  { id:'S2', name:'Infrastructure → Platform', c:'#7b5ea7', traits:['T4','T1'],
+    desc:'기능 전용 도시 인프라를 시민 체험 플랫폼으로 재프로그래밍.' },
+  { id:'S3', name:'Data → Interface',          c:'#3e8fb0', traits:['T7','T5'],
+    desc:'알고리즘·환경 데이터를 감각 가능한 공간으로 번역.' },
+  { id:'S4', name:'Metabolic System',          c:'#c47f17', traits:['T8','T5'],
+    desc:'에너지·물·식량·탄소 흐름을 건축 시스템으로 통합.' },
+  { id:'S5', name:'Cosmic Scale',              c:'#7a7a9e', traits:['T7','T8'],
+    desc:'사고 스케일이 도시→지구→우주로 확장.' },
+];
+const TRAITS = [
+  { id:'T1', name:'레이어 중첩',    c:'#c84b2f' },
+  { id:'T2', name:'단면 중심',      c:'#4a7c8e' },
+  { id:'T3', name:'보이드 전략',    c:'#2d6a4f' },
+  { id:'T4', name:'인프라 공공화',  c:'#7b5ea7' },
+  { id:'T5', name:'표피·구조 통합', c:'#c47f17' },
+  { id:'T6', name:'시간·기억',      c:'#8b4513' },
+  { id:'T7', name:'파라메트릭',     c:'#3d5a80' },
+  { id:'T8', name:'순환·대사',      c:'#b5446e' },
+];
+const PROJ = [
+  { year:2008, title:'야학당',               sub:'Learning Outside Library',
+    traits:[3,3,2,1,1,2,0,0], strands:['S1','S2'],
+    note:'기존 한옥 위 학습·자연 레이어 중첩(T1★). 개방형 단면(T2★). 비밀의 숲(T3●). S1 계보의 첫 작업.' },
+  { year:2009, title:'Permanent String',     sub:'당인리 발전소 · 도시농장',
+    traits:[3,2,1,3,2,1,0,3], strands:['S1','S2','S4'],
+    note:'발전소 구조 보존+농장·산책로 중첩(T1★). 폐열→농작물 폐쇄 루프(T8★). S1+S2+S4 교차.' },
+  { year:2010, title:'Urban Coat',           sub:'도시의 외투 · 인프라 플랫폼',
+    traits:[3,1,2,3,2,1,0,1], strands:['S2'],
+    note:'고가·교각 상부에 공공 레이어 중첩(T1★). 이동 전용→체류 플랫폼(T4★). S2 순수 완성작.' },
+  { year:2010, title:'What is your name?',   sub:'Linear Housing · 심리적 서사',
+    traits:[1,3,3,0,0,2,0,0], strands:[],
+    note:'선형 평면—동선이 내면 여정(T2★). 도시 보이드 접속(T3★). 독립 태도 실험.' },
+  { year:2011, title:'Media Manhattan',      sub:'Living Mirror of Urban Consciousness',
+    traits:[2,1,2,3,3,0,2,2], strands:['S3','S4'],
+    note:'반응형 디지털 외피가 도시 데이터 변환(T5★). 기공 정보 인터페이스(T3●). S3 최초 완성작.' },
+  { year:2011, title:'Parametric Tectonics', sub:'파라메트릭 텍토닉스 · 반응형 외피',
+    traits:[1,1,1,0,3,0,3,0], strands:['S3'],
+    note:'8변수 집합 알고리즘(T7★). Folding=표피+구조+채광 통합(T5★). S3 방법론 확립.' },
+  { year:2012, title:'Eureka School',        sub:'Peck Slip Elementary School',
+    traits:[2,3,2,1,2,3,2,0], strands:['S2'],
+    note:'항구 기억 건축화(T6★). 범선 Rib 외피=구조+역사 은유(T5●). T6 최초 강도 3.' },
+  { year:2012, title:'Gowanus Housing',      sub:'고와너스 주거단지 · Void Housing',
+    traits:[2,3,3,2,2,1,1,0], strands:['S2'],
+    note:'중앙 보이드=커뮤니티·채광·환기 촉매(T3★). 타공 코르텐=시간의 질감(T6●). T3 첫 정점.' },
+  { year:2013, title:'Kaitak Car Towers',    sub:'카이탁 카 타워 · Urban Promenade',
+    traits:[2,2,2,3,2,0,1,1], strands:['S2'],
+    note:'주차 구조→Urban Promenade(T4★). Accidental Programs 수직 적층(T2●). S2 홍콩 버전.' },
+  { year:2013, title:'Garden in the Machine',sub:'기계 속의 정원 · Machine Landscape',
+    traits:[1,1,1,1,0,2,0,0], strands:[],
+    note:'기계=장소 교란 서사 매개체(T6●). 독립 비평 실험.' },
+  { year:2014, title:'Metabolic Infrastructure', sub:'대사 인프라 · Metabolic Tower',
+    traits:[3,2,2,3,3,1,3,3], strands:['S1','S2','S3','S4'],
+    note:'최소 표면+위빙=표피·구조·대사 통합(T5★). Bee Hive 알고리즘(T7★). 에너지 폐쇄 루프(T8★). 4개 스트랜드 교차 — Phase II 완성작.' },
+  { year:2023, title:'Resonating Memories',  sub:'공명하는 기억 · Toolshed Network',
+    traits:[2,0,0,3,1,3,0,1], strands:['S2'],
+    note:'도시 사물→Toolshed(T6★+T4★). 9년 공백 후 T6 귀환. S2 Phase III 첫 작업.' },
+  { year:2024, title:'Heavenly Haven',       sub:'Inflated Clouds · Cloud Canopy',
+    traits:[3,2,1,2,2,1,0,3], strands:['S1','S4'],
+    note:'로우하우스 보존+인플레이터블 중첩(T1★). 폐열→구름 구조(T8★). S1+S4 교차.' },
+  { year:2024, title:'Tejido Luminosos',     sub:'Luminous Weaves · Weaving Pavilion',
+    traits:[1,0,1,2,3,1,1,0], strands:['S3'],
+    note:'직기 논리→공간 프레임(T5★). 반투명 실=밀도·투명성 조절. S3 물질적 실현.' },
+  { year:2024, title:'Space Scrapers',       sub:'35,786km · Space Tower',
+    traits:[1,0,1,2,2,0,2,2], strands:['S5'],
+    note:'스페이스 엘리베이터 영감. 태양 에너지 공유(T8●). 정지위성 카운터웨이트(T7●). S5 첫 발현.' },
+  { year:2024, title:'Machines for Pleasure 2.0', sub:'쾌락 기계 · Machine Landscape',
+    traits:[0,0,1,1,0,2,0,0], strands:[],
+    note:'Garden in the Machine 재해석(T6●). 독립 서사 실험.' },
+  { year:2024, title:'Luminous Wave',        sub:'Helsinki Museum of Future',
+    traits:[2,2,1,3,3,1,2,2], strands:['S1','S3','S4'],
+    note:'히멜리 파사드=시각·일조·열 효율 통합(T5★). BIPV+지열+빗물(T8●). S1+S3+S4 교차.' },
+  { year:2024, title:'Gireum Urban Oasis',   sub:'길음 복합문화체육센터',
+    traits:[2,2,2,3,3,0,1,1], strands:['S2'],
+    note:'재생 알루미늄 루버=시선·소음·채광·환기(T5★). 미개발지→공공 거점(T4★). S2 Phase III 안정화.' },
+  { year:2024, title:'평택중앙도서관',       sub:'Urban Oasis & Knowledge Hub',
+    traits:[2,3,2,3,2,0,0,0], strands:['S2'],
+    note:'공원+테라스+아트리움 수직 연결(T2★). 지식·자연 결합 공공 거점(T4★).' },
+  { year:2026, title:'Radiant Analemma',     sub:'태양 궤적 설치 · Solar Sculpture',
+    traits:[1,0,2,2,2,1,2,1], strands:['S3','S5'],
+    note:'아날렘마 구조물—태양 좌표 기반(T7●). 광섬유 메시 Skin of Light(T5●). S3+S5 최종 교차.' },
+];
+
+/* ══ LEGEND ══ */
+const legS = document.getElementById('leg-s');
+STRANDS.forEach(s => {
+  const d = document.createElement('div'); d.className='leg-row';
+  d.innerHTML=`<div class="leg-line" style="background:${s.c}"></div><span style="color:${s.c};font-weight:500">${s.id}</span><span>${s.name}</span>`;
+  legS.appendChild(d);
+});
+const legT = document.getElementById('leg-t');
+TRAITS.forEach(t => {
+  const d = document.createElement('div'); d.className='leg-row';
+  d.innerHTML=`<div class="leg-dot" style="background:${t.c}"></div><span style="color:${t.c};font-weight:500">${t.id}</span><span>${t.name}</span>`;
+  legT.appendChild(d);
+});
+
+/* ══════════════════════════════════════════════════════════
+   LAYOUT CONSTANTS
+══════════════════════════════════════════════════════════ */
+function buildMain() {
+  const svg = document.getElementById('main-svg');
+  const W = Math.max(1300, window.innerWidth || 1440);
+  const ML = 150, MR = 36;
+  const PW = (W - ML - MR) / PROJ.length;   // per-project column width
+
+  // Heatmap cell dimensions
+  // Gap between projects = where trait threads curve through
+  const GAP   = Math.max(4, PW * 0.18);     // gap between cells (the "thread corridor")
+  const CW    = PW - GAP;                    // cell width
+  const CH    = 28;                          // cell height
+  const T_GAP = 10;                          // vertical gap between trait rows
+
+  // Y zones
+  const Y_PHASE   = 24;
+  const Z1_TOP    = 48;   // strands
+  const S_H       = 36;   // strand row height
+  const Z1_BOT    = Z1_TOP + STRANDS.length * S_H;
+
+  const Z2_NODE_Y = Z1_BOT + 60;   // project node center
+  const NODE_RMAX = 16;
+
+  // Heatmap+threads zone: each trait row = cell + gap_below
+  const Z3_TOP    = Z2_NODE_Y + NODE_RMAX + 28;
+  const ROW_H     = CH + T_GAP;            // total height per trait row
+  const Z3_BOT    = Z3_TOP + TRAITS.length * ROW_H - T_GAP;
+
+  const H = Z3_BOT + 90;
+
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, a={}) => {
+    const el = document.createElementNS(NS, tag);
+    Object.entries(a).forEach(([k,v]) => el.setAttribute(k,v));
+    return el;
+  };
+  const addTxt = (x, y, s, a={}) => {
+    const el = mk('text', {x, y, 'font-family':'DM Mono', ...a});
+    el.textContent = s; svg.appendChild(el); return el;
+  };
+
+  // BG
+  svg.appendChild(mk('rect',{x:0,y:0,width:W,height:H,fill:'#ffffcc'}));
+
+  /* ── PHASE BANDS ── */
+  const phases = [[0,2,'#c84b2f',0.05,'Phase I','2008–2010'],
+                  [3,10,'#3e8fb0',0.038,'Phase II','2010–2014'],
+                  [11,19,'#4a9e6b',0.038,'Phase III','2023–2026']];
+  phases.forEach(([s,e,c,op,lb,yr]) => {
+    svg.appendChild(mk('rect',{
+      x:ML+s*PW, y:Z1_TOP-12, width:(e-s+1)*PW, height:H-Z1_TOP+12-36,
+      fill:c, opacity:op
+    }));
+    const cx = ML + (s + (e-s)/2 + 0.5)*PW;
+    addTxt(cx, Y_PHASE,   lb, {'text-anchor':'middle','font-size':'8','fill':c,'font-weight':'500','letter-spacing':'0.09em'});
+    addTxt(cx, Y_PHASE+11,yr, {'text-anchor':'middle','font-size':'7','fill':'#aaa880'});
+  });
+
+  /* ── SECTION LABELS ── */
+  const secLbl = (y, s) => addTxt(8, y, s, {'font-size':'7','fill':'#aaa880','letter-spacing':'0.12em'});
+  secLbl(Z1_TOP-4, 'STRANDS');
+  secLbl(Z2_NODE_Y-NODE_RMAX-14, 'NODES');
+  secLbl(Z3_TOP-8, 'TRAITS + HEATMAP');
+
+  svg.appendChild(mk('line',{x1:0,y1:Z1_BOT+14,x2:W,y2:Z1_BOT+14,stroke:'#cccca0','stroke-width':'0.5'}));
+  svg.appendChild(mk('line',{x1:0,y1:Z3_TOP-14,x2:W,y2:Z3_TOP-14,stroke:'#cccca0','stroke-width':'0.5'}));
+
+  /* ── ZONE 1: STRANDS ── */
+  STRANDS.forEach((s, si) => {
+    const y = Z1_TOP + si * S_H + S_H/2;
+    svg.appendChild(mk('line',{x1:ML,y1:y,x2:W-MR,y2:y,stroke:'#cccca0','stroke-width':'0.5'}));
+    addTxt(ML-8,  y+3,  s.id,   {'text-anchor':'end','font-size':'9','fill':s.c,'font-weight':'500'});
+    addTxt(ML-18, y+13, s.name, {'text-anchor':'end','font-size':'7','fill':'#8a8870'});
+
+    // Thread segments
+    for (let i=0;i<PROJ.length-1;i++) {
+      if (PROJ[i].strands.includes(s.id) && PROJ[i+1].strands.includes(s.id)) {
+        svg.appendChild(mk('line',{
+          x1:ML+i*PW+PW/2, y1:y, x2:ML+(i+1)*PW+PW/2, y2:y,
+          stroke:s.c,'stroke-width':'2.4',opacity:'0.7'
+        }));
+      }
+    }
+    PROJ.forEach((p,pi) => {
+      if (!p.strands.includes(s.id)) return;
+      svg.appendChild(mk('circle',{cx:ML+pi*PW+PW/2,cy:y,r:4.5,fill:s.c,opacity:'0.9'}));
+    });
+  });
+
+  /* ── ZONE 2: NODES ── */
+  PROJ.forEach((p,pi) => {
+    const cx = ML+pi*PW+PW/2;
+    const cy = Z2_NODE_Y;
+
+    // Connectors
+    svg.appendChild(mk('line',{x1:cx,y1:Z1_BOT+16,x2:cx,y2:cy-NODE_RMAX-4,stroke:'#aaa880','stroke-width':'0.5','stroke-dasharray':'2,3'}));
+    svg.appendChild(mk('line',{x1:cx,y1:cy+NODE_RMAX+4,x2:cx,y2:Z3_TOP-14,stroke:'#aaa880','stroke-width':'0.5','stroke-dasharray':'2,3'}));
+
+    const total = p.traits.reduce((a,b)=>a+b,0);
+    const r = 7 + (total/30)*9;
+    const nc = p.strands.length>0 ? STRANDS.find(s=>s.id===p.strands[0]).c : '#b0ad98';
+
+    // Glow
+    if (p.strands.length>0) svg.appendChild(mk('circle',{cx,cy,r:r+9,fill:nc,opacity:'0.06'}));
+
+    // Multi-strand rings
+    p.strands.slice(1).forEach((sid,ri) => {
+      const sc = STRANDS.find(s=>s.id===sid).c;
+      svg.appendChild(mk('circle',{cx,cy,r:r+5+ri*4,fill:'none',stroke:sc,'stroke-width':'0.9',opacity:'0.35'}));
+    });
+
+    // Main node
+    const circ = mk('circle',{cx,cy,r,fill:nc,opacity:'0.86',style:'cursor:pointer'});
+    circ.addEventListener('mouseenter',e=>{
+      const sn=p.strands.map(sid=>STRANDS.find(s=>s.id===sid).name).join(' · ')||'독립 실험';
+      showTip(e,`${p.year}  ${p.title}\n${p.sub}\n\nStrands: ${sn}\n\n${p.note}`);
+    });
+    circ.addEventListener('mousemove',moveTip);
+    circ.addEventListener('mouseleave',hideTip);
+    svg.appendChild(circ);
+
+    // Year
+    addTxt(cx, cy-r-7, String(p.year), {'text-anchor':'middle','font-size':'8','fill':'#c84b2f'});
+
+    // Title angled below the whole diagram
+    const g = mk('g',{transform:`translate(${cx},${Z3_BOT+16}) rotate(-48)`});
+    const tl = mk('text',{x:0,y:0,'text-anchor':'end','font-family':'DM Mono','font-size':'8','fill':'#8a8060'});
+    tl.textContent = p.title; g.appendChild(tl); svg.appendChild(g);
+  });
+
+  /* ══════════════════════════════════════════════════════
+     ZONE 3: HEATMAP + TRAIT THREADS — UNIFIED
+     For each trait row:
+       - Draw cells (rect + symbol) for each project
+       - In the GAP between projects, draw curved thread
+         connecting cell-center to next cell-center,
+         arcing THROUGH the gap space (above or below mid)
+         weighted by intensity difference
+  ══════════════════════════════════════════════════════ */
+  TRAITS.forEach((t, ti) => {
+    const rowY  = Z3_TOP + ti * ROW_H;   // top of cell row
+    const cellY = rowY;                   // cell top = rowY
+    const midY  = rowY + CH/2;           // vertical center of cells
+
+    // Row label
+    addTxt(ML-8,  midY+3,  t.id,   {'text-anchor':'end','font-size':'9','fill':t.c,'font-weight':'500'});
+    addTxt(ML-18, midY+12, t.name, {'text-anchor':'end','font-size':'7','fill':'#8a8870'});
+
+    // Row total (right)
+    const rowTot = PROJ.reduce((s,p)=>s+p.traits[ti],0);
+    addTxt(W-MR+5, midY+3, String(rowTot), {'font-size':'8','fill':t.c,'opacity':'0.6','font-weight':'500'});
+
+    /* ── TRAIT THREAD: curves through the gaps ── */
+    // Collect all project cell centers (including v=0 as "absent")
+    const pts = PROJ.map((p,pi) => ({
+      x: ML + pi*PW + GAP/2 + CW/2,   // horizontal center of cell
+      v: p.traits[ti],
+    }));
+
+    // Draw curve segments between consecutive non-zero cells
+    // The curve passes through the gap (between x_right_of_cell_i and x_left_of_cell_i+1)
+    for (let i=0; i<pts.length-1; i++) {
+      const va = pts[i].v, vb = pts[i+1].v;
+      if (va===0 && vb===0) continue;   // both absent — no thread
+      if (va===0 || vb===0) continue;   // one absent — skip (thread broken)
+
+      const xa = pts[i].x;
+      const xb = pts[i+1].x;
+
+      // Thread enters right edge of cell i, exits left edge of cell i+1
+      const xOut = ML + i*PW + GAP/2 + CW;      // right edge of cell i
+      const xIn  = ML + (i+1)*PW + GAP/2;        // left edge of cell i+1
+
+      // Arc control points: curve dips into the gap corridor
+      // Height of arc = proportional to average intensity (stronger = more visible arc)
+      const avgV  = (va+vb)/2;
+      const arcH  = (avgV/3) * (CH * 0.55);     // max arc = 55% of cell height
+      const cpY   = midY - arcH;                  // arc bulges upward into the gap
+
+      const sw  = va===3&&vb===3 ? 1.8 : va>=2||vb>=2 ? 1.2 : 0.7;
+      const op  = va===3||vb===3 ? 0.7 : 0.45;
+
+      svg.appendChild(mk('path',{
+        d:`M ${xOut} ${midY} C ${xOut+GAP*0.3} ${cpY}, ${xIn-GAP*0.3} ${cpY}, ${xIn} ${midY}`,
+        fill:'none', stroke:t.c, 'stroke-width':sw, opacity:op
+      }));
+    }
+
+    /* ── HEATMAP CELLS ── */
+    PROJ.forEach((p, pi) => {
+      const v  = p.traits[ti];
+      const cx = ML + pi*PW + GAP/2;   // cell left x
+      const rx = cx + CW;               // cell right x
+      const cellCX = cx + CW/2;
+
+      // Cell background
+      const alpha = v===0 ? 0 : v===1 ? 0.15 : v===2 ? 0.40 : 0.78;
+      svg.appendChild(mk('rect',{
+        x:cx+0.5, y:cellY+0.5, width:CW-1, height:CH-1,
+        fill: v>0 ? t.c : '#ffffcc',
+        opacity: v>0 ? alpha : 1,
+        rx:'2'
+      }));
+
+      // Cell border
+      svg.appendChild(mk('rect',{
+        x:cx+0.5, y:cellY+0.5, width:CW-1, height:CH-1,
+        fill:'none',
+        stroke: v>0 ? t.c : '#cccca0',
+        opacity: v>0 ? (alpha+0.15) : 1,
+        'stroke-width':'0.5',
+        rx:'2'
+      }));
+
+      // Symbol
+      const sym = v===3?'★':v===2?'●':v===1?'◐':'';
+      if (sym) {
+        const sc = v===3?'rgba(255,255,255,0.95)':v===2?'rgba(255,255,255,0.9)': t.c;
+        addTxt(cellCX, midY+3.5, sym, {
+          'text-anchor':'middle','font-size': v===3?'9':'8','fill':sc,'pointer-events':'none'
+        });
+      }
+
+      // Invisible hover rect
+      const hover = mk('rect',{x:cx,y:cellY,width:CW,height:CH,fill:'transparent',style:'cursor:pointer'});
+      hover.addEventListener('mouseenter',e=>showTip(e,
+        `${p.year}  ${p.title}\n[${t.id}] ${t.name}  ${'★'.repeat(v)}${'☆'.repeat(3-v)}\n\n${p.note}`));
+      hover.addEventListener('mousemove',moveTip);
+      hover.addEventListener('mouseleave',hideTip);
+      svg.appendChild(hover);
+
+      // Small thread entry/exit dots (shows where thread meets cell)
+      if (v>0) {
+        // entry dot (left edge)
+        svg.appendChild(mk('circle',{cx,cy:midY,r:2,fill:t.c,opacity:'0.6'}));
+        // exit dot (right edge)
+        svg.appendChild(mk('circle',{cx:rx,cy:midY,r:2,fill:t.c,opacity:'0.6'}));
+      }
+    });
+
+    // Horizontal baseline behind cells (very faint, full width)
+    svg.appendChild(mk('line',{x1:ML,y1:midY,x2:W-MR,y2:midY,stroke:t.c,'stroke-width':'0.3',opacity:'0.15'}));
+  });
+
+  /* ── COLUMN TICK MARKS: project year at top of heatmap ── */
+  PROJ.forEach((p,pi) => {
+    const cx = ML+pi*PW+GAP/2+CW/2;
+    svg.appendChild(mk('line',{x1:cx,y1:Z3_TOP-14,x2:cx,y2:Z3_TOP-8,stroke:'#aaa880','stroke-width':'0.6'}));
+  });
+}
+
+/* ════ TOOLTIP ════ */
+const tipEl = document.getElementById('tip');
+function showTip(e, s) {
+  tipEl.innerHTML = s.split('\n').map((l,i)=>
+    i===0?`<strong style="color:#1a1814;font-size:10px">${l}</strong>`:l
+  ).join('<br>');
+  tipEl.classList.add('on'); moveTip(e);
+}
+function moveTip(e) {
+  let lx=e.clientX+16, ly=e.clientY-8;
+  if (lx+305>window.innerWidth) lx=e.clientX-310;
+  tipEl.style.left=lx+'px'; tipEl.style.top=ly+'px';
+}
+function hideTip() { tipEl.classList.remove('on'); }
+
+/* ════ ANALYSIS ════ */
+function buildAN() {
+  const tr = TRAITS.map((t,ti)=>({...t,
+    total:PROJ.reduce((s,p)=>s+p.traits[ti],0),
+    count:PROJ.filter(p=>p.traits[ti]>0).length,
+    strong:PROJ.filter(p=>p.traits[ti]===3).length,
+  })).sort((a,b)=>b.total-a.total);
+
+  document.getElementById('an-wrap').innerHTML=`
+<div class="ag5">
+  ${STRANDS.map(s=>{
+    const ps=PROJ.filter(p=>p.strands.includes(s.id));
+    return `<div class="ac">
+      <div style="width:18px;height:3px;background:${s.c};border-radius:2px;margin-bottom:9px"></div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:400;color:var(--paper);margin-bottom:7px;line-height:1.3">${s.name}</div>
+      <div style="font-size:8px;color:var(--trace);line-height:1.9;margin-bottom:9px">${s.desc}</div>
+      <div style="font-size:7.5px;color:#3a3428;margin-bottom:5px">${s.traits.map(tid=>`<span class="tt" style="background:${TRAITS.find(t=>t.id===tid)?.c}">${tid}</span>`).join('')}</div>
+      <div style="font-size:7.5px;line-height:2.1">${ps.map(p=>`<span style="color:#555">${p.year}&thinsp;</span><span style="color:#3a3428">${p.title}</span>`).join('<br>')}</div>
+    </div>`;
+  }).join('')}
+</div>
+<div class="ag">
+  <div class="ac">
+    <h4>트레잇 강도 순위</h4>
+    ${tr.map(t=>`<div class="bar-row">
+      <span class="tt" style="background:${t.c};width:64px;text-align:center">${t.id}</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${(t.total/62)*100}%;background:${t.c}"></div></div>
+      <span style="font-size:9px;color:${t.c};font-weight:600;width:18px;text-align:right">${t.total}</span>
+      <span style="font-size:8px;color:#3a3428">${t.count}작업 ★${t.strong}</span>
+    </div>`).join('')}
+    <p style="margin-top:11px">T1 레이어 중첩 — 20개 전 프로젝트에서 소거되지 않은 유일한 태도.</p>
+  </div>
+  <div class="ac">
+    <h4>3단계 궤적</h4>
+    <div class="ph"><div class="ph-lbl" style="color:#c84b2f">Phase I · 2008–2010 · 서울 실험</div>
+    <p><span class="tt" style="background:#c84b2f">T1</span><span class="tt" style="background:#7b5ea7">T4</span><span class="tt" style="background:#b5446e">T8</span> 동시 등장. S1·S2·S4 첫 세 작업에서 발현.</p></div>
+    <div class="ph"><div class="ph-lbl" style="color:#3e8fb0">Phase II · 2010–2014 · Pratt 심화</div>
+    <p><span class="tt" style="background:#4a7c8e">T2</span><span class="tt" style="background:#c47f17">T5</span><span class="tt" style="background:#3d5a80">T7</span> 급강화. Metabolic Infrastructure에서 4개 스트랜드 동시 교차. T7 이후 소거.</p></div>
+    <div class="ph"><div class="ph-lbl" style="color:#4a9e6b">Phase III · 2023–2026 · 공공 성숙·우주 확장</div>
+    <p><span class="tt" style="background:#8b4513">T6</span> 9년 만에 귀환. S5 Cosmic Scale 발현. 사고 스케일: 도시 → 시스템 → 환경 → 우주.</p></div>
+    <div style="margin-top:12px;padding:9px 13px;background:#eeeec8;border-left:2px solid #3e8fb0;font-size:8.5px;color:var(--trace);line-height:2.1">
+      <strong style="color:#1a1814">사고 확장</strong><br>
+      Nature → Infrastructure → Metabolic → Environmental Interface → Cosmic
+    </div>
+  </div>
+</div>
+<div style="background:var(--bg);border:1px solid var(--rule);padding:22px 26px;margin-top:1px">
+  <h4 style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rule)">테이블 위 5개 계보선</h4>
+  <ul style="padding-left:13px;line-height:2.8">
+    <li><span class="tt" style="background:#c84b2f">T1</span><span style="color:var(--trace)">야학당 → Permanent String → Urban Coat → Heavenly Haven → Gireum Urban Oasis</span>&ensp;<em style="color:#333">가장 두꺼운 실</em></li>
+    <li><span class="tt" style="background:#4a9e6b">S1</span><span style="color:var(--trace)">야학당 → Permanent String → Metabolic Infrastructure → Heavenly Haven → Luminous Wave</span></li>
+    <li><span class="tt" style="background:#c47f17">S4</span><span style="color:var(--trace)">Permanent String → Metabolic Infrastructure → Heavenly Haven → Luminous Wave</span></li>
+    <li><span class="tt" style="background:#8b4513">T6</span><span style="color:var(--trace)">Eureka School ——(9년 공백)—— Resonating Memories</span>&ensp;<em style="color:#333">가장 긴 단절선</em></li>
+    <li><span class="tt" style="background:#7a7a9e">S5</span><span style="color:var(--trace)">Metabolic Infrastructure → Space Scrapers → Radiant Analemma</span></li>
+  </ul>
+</div>`;
+}
+
+/* ════ TABS ════ */
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+buildMain();
+buildAN();
+</script>
+</body>
+</html>
